@@ -35,18 +35,11 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <!-- MBTiles file import via file picker -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            <!-- MBTiles file import via file picker -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/octet-stream" />
-                <data android:mimeType="*/*" />
-                <data android:pathPattern=".*\\.mbtiles" />
             </intent-filter>
         </activity>
 

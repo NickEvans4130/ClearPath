@@ -29,10 +29,7 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            val routes  = application.routeRepository.observeAll()
-            val cameras = application.cameraRepository.observeAll()
-
-            routes.collect { routeList ->
+            application.routeRepository.observeAll().collect { routeList ->
                 val exposure = routeList.sumOf { r ->
                     r.cameraEncounters.sumOf { it.estimatedExposureSeconds }
                 }

@@ -16,10 +16,4 @@ app/build/
 app/src/main/assets/tiles/*.mbtiles
 tiles/*.mbtiles
 
-# Fonts — download separately (see README)
-app/src/main/assets/fonts/*.ttf
-
-# Gradle wrapper jar (regenerate with: gradle wrapper)
-gradle/wrapper/gradle-wrapper.jar
-gradlew
-gradlew.bat
+# NOTE: Fonts, gradle wrapper, and gradlew are committed for reproducible builds

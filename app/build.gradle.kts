@@ -98,6 +98,9 @@ dependencies {
     // Permissions
     implementation(libs.accompanist.permissions)
 
+    // Material icons extended
+    implementation(libs.material.icons.extended)
+
     // Image loading
     implementation(libs.coil.compose)
 

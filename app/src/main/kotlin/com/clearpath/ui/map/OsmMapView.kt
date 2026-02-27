@@ -12,7 +12,7 @@ import com.clearpath.data.camera.CameraNode
 import com.clearpath.data.camera.CameraType
 import com.clearpath.data.route.LatLon
 import com.clearpath.data.route.SavedRoute
-import com.clearpath.data.tiles.MBTilesSource
+import com.clearpath.data.tiles.MBTilesArchive
 import com.clearpath.map.CameraOverlayManager
 import com.clearpath.map.HeatmapOverlayManager
 import com.clearpath.map.LayerSettings
@@ -68,9 +68,7 @@ fun OsmMapView(
     // ── Tile source ───────────────────────────────────────────────────────────
     LaunchedEffect(tilesFile) {
         if (tilesFile != null && tilesFile.exists()) {
-            val mbtiles = MBTilesSource(tilesFile).also { it.open() }
-            mapView.setTileSource(mbtiles)
-            mapView.invalidate()
+            MBTilesArchive.applyToMapView(context, mapView, tilesFile)
         }
     }
 

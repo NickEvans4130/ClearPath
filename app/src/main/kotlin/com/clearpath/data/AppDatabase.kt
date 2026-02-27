@@ -20,7 +20,7 @@ import com.clearpath.geocoding.GeocodingResult
         GeocodingResult::class,
     ],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 @TypeConverters(RouteTypeConverters::class)
 abstract class AppDatabase : RoomDatabase() {

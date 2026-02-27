@@ -33,12 +33,6 @@ interface RouteDao {
     @Query("SELECT DISTINCT alias FROM saved_routes WHERE alias IS NOT NULL")
     fun observeAliases(): Flow<List<String>>
 
-    @Query("""
-        SELECT SUM(
-            (SELECT SUM(estimated_exposure_seconds)
-             FROM json_each(camera_encounters))
-        )
-        FROM saved_routes
-    """)
-    suspend fun getTotalExposureSeconds(): Int?
+    @Query("SELECT * FROM saved_routes")
+    suspend fun getAllForStats(): List<SavedRoute>
 }

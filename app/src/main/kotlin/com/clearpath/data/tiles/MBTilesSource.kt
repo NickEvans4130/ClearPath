@@ -2,52 +2,43 @@ package com.clearpath.data.tiles
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import org.osmdroid.tileprovider.tilesource.BitmapTileSourceBase
+import org.osmdroid.tileprovider.modules.IArchiveFile
+import org.osmdroid.tileprovider.modules.MapTileFileArchiveProvider
+import org.osmdroid.tileprovider.tilesource.ITileSource
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.util.SimpleRegisterReceiver
 import org.osmdroid.util.MapTileIndex
+import org.osmdroid.views.MapView
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.InputStream
 
 /**
- * osmdroid ITileSource backed by a local .mbtiles SQLite file.
+ * MBTiles archive for osmdroid's [IArchiveFile] provider system.
  *
- * MBTiles uses TMS tile coordinates where the Y axis is flipped relative to
- * the standard XYZ (slippy map) scheme used by osmdroid.
- *
- * Conversion:  tmsY = (1 << zoom) - 1 - osmY
+ * MBTiles uses TMS y-coordinates (y=0 at south), osmdroid uses XYZ (y=0 at north):
+ *   tmsRow = (1 << zoom) - 1 - osmY
  */
-class MBTilesSource(
-    private val mbtilesFile: File,
-) : BitmapTileSourceBase(
-    /* aName          = */ mbtilesFile.nameWithoutExtension,
-    /* aZoomMinLevel  = */ 1,
-    /* aZoomMaxLevel  = */ 18,
-    /* aTileSizePixels= */ 256,
-    /* aImageFilenameEnding = */ ".png",
-) {
+class MBTilesArchive : IArchiveFile {
 
     private var db: SQLiteDatabase? = null
+    private var ignoreTileSource = false
 
-    fun open() {
+    // Called by MapTileFileArchiveProvider with the on-disk archive file
+    override fun init(pFile: File) {
+        db?.close()
         db = SQLiteDatabase.openDatabase(
-            mbtilesFile.absolutePath,
+            pFile.absolutePath,
             null,
             SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS,
         )
     }
 
-    fun close() {
-        db?.close()
-        db = null
-    }
-
-    override fun getTile(pMapTile: Long): Bitmap? {
-        val db = db ?: return null
-        val zoom = MapTileIndex.getZoom(pMapTile)
-        val col  = MapTileIndex.getX(pMapTile).toLong()
-        val row  = MapTileIndex.getY(pMapTile).toLong()
-
-        // Flip Y: MBTiles TMS → XYZ
+    override fun getInputStream(tileSource: ITileSource, pMapTileIndex: Long): InputStream? {
+        val db   = db ?: return null
+        val zoom = MapTileIndex.getZoom(pMapTileIndex)
+        val col  = MapTileIndex.getX(pMapTileIndex).toLong()
+        val row  = MapTileIndex.getY(pMapTileIndex).toLong()
         val tmsRow = (1L shl zoom) - 1L - row
 
         return try {
@@ -55,23 +46,37 @@ class MBTilesSource(
                 "SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?",
                 arrayOf(zoom.toString(), col.toString(), tmsRow.toString()),
             ).use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val blob = cursor.getBlob(0)
-                    BitmapFactory.decodeByteArray(blob, 0, blob.size)
-                } else null
+                if (cursor.moveToFirst()) ByteArrayInputStream(cursor.getBlob(0)) else null
             }
         } catch (e: Exception) {
             null
         }
     }
 
-    val isOpen: Boolean get() = db?.isOpen == true
+    override fun close() {
+        db?.close()
+        db = null
+    }
+
+    override fun getTileSources(): Set<String> = emptySet()
+
+    override fun setIgnoreTileSource(pIgnoreTileSource: Boolean) {
+        ignoreTileSource = pIgnoreTileSource
+    }
 
     companion object {
-        fun fromContext(context: Context, filename: String): MBTilesSource? {
-            val file = File(context.getExternalFilesDir("tiles"), filename)
-            if (!file.exists()) return null
-            return MBTilesSource(file).also { it.open() }
+        /**
+         * Swap a MapView's tile provider to read from an MBTiles file.
+         */
+        fun applyToMapView(context: Context, mapView: MapView, file: File) {
+            val archive  = MBTilesArchive().also { it.init(file) }
+            val source   = TileSourceFactory.MAPNIK
+            val receiver = SimpleRegisterReceiver(context)
+            val provider = MapTileFileArchiveProvider(receiver, source, arrayOf(archive))
+            mapView.tileProvider = org.osmdroid.tileprovider.MapTileProviderArray(
+                source, receiver, arrayOf(provider)
+            )
+            mapView.invalidate()
         }
     }
 }
