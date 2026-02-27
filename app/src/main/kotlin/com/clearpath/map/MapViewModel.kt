@@ -42,6 +42,7 @@ data class MapUiState(
     val selectedRoute: SavedRoute?             = null,
     val origin: LatLon?                        = null,
     val destination: LatLon?                   = null,
+    val mapCenter: LatLon                      = LatLon(51.5074, -0.1278),
     val searchResults: List<SearchResult>      = emptyList(),
     val isSearching: Boolean                   = false,
     val isRouting: Boolean                     = false,
@@ -117,9 +118,16 @@ class MapViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setOrigin(latLon: LatLon)      = _uiState.update { it.copy(origin = latLon) }
     fun setDestination(latLon: LatLon) = _uiState.update { it.copy(destination = latLon) }
+    fun clearOrigin()      = _uiState.update { it.copy(origin = null, routeAlternatives = emptyList(), selectedRoute = null) }
+    fun clearDestination() = _uiState.update { it.copy(destination = null, routeAlternatives = emptyList(), selectedRoute = null) }
     fun setRoutingMode(mode: RoutingMode) = _uiState.update { it.copy(routingMode = mode) }
     fun setOptimisation(opt: RouteOptimisation) = _uiState.update { it.copy(optimisation = opt) }
     fun setAlias(alias: String?)       = _uiState.update { it.copy(alias = alias) }
+    fun setMapCenter(latLon: LatLon)   = _uiState.update { it.copy(mapCenter = latLon) }
+
+    fun insertCamera(camera: CameraNode) {
+        viewModelScope.launch { cameraRepo.insert(camera) }
+    }
 
     fun planRoute() {
         val origin = _uiState.value.origin ?: return
