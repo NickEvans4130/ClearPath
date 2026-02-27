@@ -15,6 +15,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,10 +32,12 @@ import com.clearpath.ui.map.OsmMapView
 import com.clearpath.ui.map.SearchBar
 import com.clearpath.ui.routing.NavigationHUD
 import com.clearpath.ui.routing.RouteComparisonSheet
+import com.clearpath.ui.routing.RoutePlanningSheet
+import com.clearpath.ui.tagging.TagCameraSheet
 import com.clearpath.ui.theme.Background
 import kotlinx.coroutines.launch
 
-enum class BottomSheetContent { NONE, LAYERS, ROUTE_COMPARISON }
+enum class BottomSheetContent { NONE, LAYERS, ROUTE_COMPARISON, ROUTE_PLANNING, TAG_CAMERA }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +50,8 @@ fun MapScreen(
     val uiState  by vm.uiState.collectAsState()
     val navState by vm.navState.collectAsState()
 
-    var sheetContent by remember { mutableStateOf(BottomSheetContent.NONE) }
+    var sheetContent      by remember { mutableStateOf(BottomSheetContent.NONE) }
+    var centerOnUserToken by remember { mutableLongStateOf(0L) }
     val sheetState   = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope        = rememberCoroutineScope()
 
@@ -55,17 +59,19 @@ fun MapScreen(
 
         // ── Full-screen map ───────────────────────────────────────────────────
         OsmMapView(
-            modifier       = Modifier.fillMaxSize(),
-            cameras        = uiState.cameras,
-            layers         = uiState.layers,
-            selectedRoute  = uiState.selectedRoute,
-            alternatives   = uiState.routeAlternatives,
-            tilesFile      = uiState.activeTilesFile,
-            onCameraTap    = { vm.selectCamera(it) },
-            onMapLongPress = { latLon ->
+            modifier           = Modifier.fillMaxSize(),
+            cameras            = uiState.cameras,
+            layers             = uiState.layers,
+            selectedRoute      = uiState.selectedRoute,
+            alternatives       = uiState.routeAlternatives,
+            tilesFile          = uiState.activeTilesFile,
+            centerOnUserToken  = centerOnUserToken,
+            onCameraTap        = { vm.selectCamera(it) },
+            onMapLongPress     = { latLon ->
                 if (uiState.origin == null) vm.setOrigin(latLon)
                 else vm.setDestination(latLon)
             },
+            onMapCenterChanged = { vm.setMapCenter(it) },
         )
 
         // ── Search bar ────────────────────────────────────────────────────────
@@ -105,16 +111,18 @@ fun MapScreen(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(end = 12.dp, bottom = 80.dp),
             onSearch      = { /* focus search bar */ },
-            onMyLocation  = { /* zoom to user loc */ },
+            onMyLocation  = { centerOnUserToken = System.currentTimeMillis() },
             onToggleLayers = {
                 sheetContent = BottomSheetContent.LAYERS
                 scope.launch { sheetState.show() }
             },
-            onTagCamera   = { /* open tag sheet */ },
+            onTagCamera   = {
+                sheetContent = BottomSheetContent.TAG_CAMERA
+                scope.launch { sheetState.show() }
+            },
             onPlanRoute   = {
-                if (uiState.origin != null && uiState.destination != null) {
-                    vm.planRoute()
-                }
+                sheetContent = BottomSheetContent.ROUTE_PLANNING
+                scope.launch { sheetState.show() }
             },
             onOpenStats   = onOpenStats,
             onOpenDownload = onOpenDownload,
@@ -176,6 +184,28 @@ fun MapScreen(
                         sheetContent = BottomSheetContent.NONE
                     },
                     onChangeOptimisation = { vm.setOptimisation(it) },
+                )
+                BottomSheetContent.ROUTE_PLANNING -> RoutePlanningSheet(
+                    origin           = uiState.origin,
+                    destination      = uiState.destination,
+                    routingMode      = uiState.routingMode,
+                    isRouting        = uiState.isRouting,
+                    error            = uiState.error,
+                    onSetRoutingMode = { vm.setRoutingMode(it) },
+                    onClearOrigin    = { vm.clearOrigin() },
+                    onClearDestination = { vm.clearDestination() },
+                    onPlanRoute      = {
+                        vm.planRoute()
+                        sheetContent = BottomSheetContent.NONE
+                    },
+                )
+                BottomSheetContent.TAG_CAMERA -> TagCameraSheet(
+                    position  = uiState.mapCenter,
+                    onSave    = { camera ->
+                        vm.insertCamera(camera)
+                        sheetContent = BottomSheetContent.NONE
+                    },
+                    onDismiss = { sheetContent = BottomSheetContent.NONE },
                 )
                 else -> Unit
             }

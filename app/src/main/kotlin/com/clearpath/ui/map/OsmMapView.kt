@@ -39,8 +39,10 @@ fun OsmMapView(
     selectedRoute: SavedRoute?,
     alternatives: List<RouteAlternative>,
     tilesFile: File?,
+    centerOnUserToken: Long = 0L,
     onCameraTap: (CameraNode) -> Unit,
     onMapLongPress: (LatLon) -> Unit,
+    onMapCenterChanged: (LatLon) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -64,6 +66,13 @@ fun OsmMapView(
     val cameraOverlay  = remember { CameraOverlayManager(mapView) }
     val routeOverlay   = remember { RouteOverlayManager(mapView) }
     val heatmapOverlay = remember { HeatmapOverlayManager(mapView) }
+
+    val myLocationOverlay = remember {
+        MyLocationNewOverlay(GpsMyLocationProvider(context), mapView).also {
+            it.enableMyLocation()
+            mapView.overlays.add(it)
+        }
+    }
 
     // ── Tile source ───────────────────────────────────────────────────────────
     LaunchedEffect(tilesFile) {
@@ -104,8 +113,30 @@ fun OsmMapView(
         routeOverlay.setRoutes(routeData, if (selectedIdx >= 0) selectedIdx else 0)
     }
 
+    // Center on user location when token changes
+    LaunchedEffect(centerOnUserToken) {
+        if (centerOnUserToken > 0L) {
+            val loc = myLocationOverlay.myLocation
+            if (loc != null) {
+                mapView.controller.animateTo(loc, 16.0, 500L)
+            }
+        }
+    }
+
     DisposableEffect(Unit) {
+        val mapListener = object : MapListener {
+            override fun onScroll(event: ScrollEvent): Boolean {
+                val c = mapView.mapCenter
+                onMapCenterChanged(LatLon(c.latitude, c.longitude))
+                return false
+            }
+            override fun onZoom(event: ZoomEvent): Boolean = false
+        }
+        mapView.addMapListener(mapListener)
+
         onDispose {
+            mapView.removeMapListener(mapListener)
+            myLocationOverlay.disableMyLocation()
             mapView.onDetach()
             cameraOverlay.clear()
         }
