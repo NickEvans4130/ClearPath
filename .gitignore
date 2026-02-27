@@ -1,0 +1,25 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# App build output
+app/build/
+
+# Downloaded tile files (large binaries, regenerate with scripts/download_tiles.sh)
+app/src/main/assets/tiles/*.mbtiles
+tiles/*.mbtiles
+
+# Fonts — download separately (see README)
+app/src/main/assets/fonts/*.ttf
+
+# Gradle wrapper jar (regenerate with: gradle wrapper)
+gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat

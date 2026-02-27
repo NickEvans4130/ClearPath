@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "generated": "2024-01-01T00:00:00Z",
+    "source": "OpenStreetMap Overpass API",
+    "note": "Bundled snapshot — regenerate with scripts/fetch_overpass_snapshot.sh"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-0.1278, 51.5074] },
+      "properties": {
+        "id": 1000000001,
+        "man_made": "surveillance",
+        "surveillance:type": "fixed",
+        "operator": "TfL",
+        "note": "Sample — replace with real data via fetch_overpass_snapshot.sh"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-0.1256, 51.5080] },
+      "properties": {
+        "id": 1000000002,
+        "man_made": "surveillance",
+        "surveillance:type": "dome",
+        "operator": "Westminster Council"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-0.1298, 51.5065] },
+      "properties": {
+        "id": 1000000003,
+        "man_made": "surveillance",
+        "surveillance:type": "anpr",
+        "operator": "Metropolitan Police"
+      }
+    }
+  ]
+}
